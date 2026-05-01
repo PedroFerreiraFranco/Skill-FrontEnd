@@ -424,7 +424,155 @@ Pergunte qual cenário se aplica antes de escolher.
 
 ---
 
-## 10. Checklist de Qualidade
+## 10. Testing
+
+### Tipos de Testes
+- **Unit**: funções isoladas (utils, hooks, lógica pura)
+- **Integration**: componentes + hooks + estado
+- **E2E**: fluxos reais do usuário (Playwright, Cypress)
+
+### Setup com Vitest + React Testing Library
+```typescript
+// Exemplo: testar componente Button
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { Button } from './Button';
+
+describe('Button', () => {
+  it('deve disparar onClick quando clicado', async () => {
+    const handleClick = vi.fn();
+    render(<Button onClick={handleClick}>Clique-me</Button>);
+    
+    await userEvent.click(screen.getByRole('button'));
+    expect(handleClick).toHaveBeenCalledOnce();
+  });
+
+  it('deve ter atributos de acessibilidade', () => {
+    render(<Button aria-label="Fechar">×</Button>);
+    expect(screen.getByRole('button', { name: 'Fechar' })).toBeInTheDocument();
+  });
+});
+```
+
+### Boas Práticas
+- Teste comportamento, não implementação
+- Use `getByRole` em vez de `getByTestId` quando possível
+- Mock apenas dependências externas (APIs, contextos)
+- Cobertura alvo: 80% para front-end
+
+---
+
+## 11. Performance e Debugging
+
+### Otimizações Comuns
+- **Code splitting**: lazy loading de rotas/componentes
+  ```typescript
+  const AdminDashboard = lazy(() => import('./AdminDashboard'));
+  ```
+- **Image optimization**: Next.js `<Image>`, WebP, lazy load
+- **Bundle analysis**: `npm run build --stats` ou `webpack-bundle-analyzer`
+- **Lighthouse**: rodar antes de deploy (Core Web Vitals)
+
+### Debugging Eficiente
+- **React DevTools**: inspetor de props, hooks, render timeline
+- **Network tab**: validar requisições, payloads, headers
+- **Console**: `console.table()` para arrays, `%c` para estilos
+- **Breakpoints**: F12 > Sources, condicional com expressão
+
+### Red Flags de Performance
+- Componentes que re-renderizam sem mudança de props
+- Efeitos sem dependency array
+- Listeners não removidos
+- Imagens acima do necessário
+- Bundles > 200KB (gzipped)
+
+---
+
+## 12. Segurança Front-End
+
+### Prevenção de Vulnerabilidades
+- **XSS**: sanitize inputs (`DOMPurify`, `sanitize-html`)
+- **CSRF**: sempre use tokens nos POST/PUT/DELETE
+- **Local storage**: nunca armazene tokens de sessão sensíveis
+- **Env vars**: use `REACT_APP_` ou `NEXT_PUBLIC_` apenas para publicamente seguro
+
+```typescript
+// ❌ Errado
+localStorage.setItem('authToken', token);
+
+// ✅ Correto
+sessionStorage.setItem('csrfToken', token);
+```
+
+### Headers HTTP Importantes
+- `Content-Security-Policy`: whitelist de scripts
+- `X-Frame-Options: DENY`: previne clickjacking
+- `Strict-Transport-Security`: force HTTPS
+
+---
+
+## 13. Acessibilidade (A11y)
+
+### Checklist WCAG 2.1 AA (Essencial)
+- [ ] Contrastes: 4.5:1 para texto, 3:1 para UI
+- [ ] Teclado: toda função acessível via Tab/Enter/Setas
+- [ ] Foco visível: outline ou box-shadow sempre presente
+- [ ] Semântica: roles corretos (`button`, `link`, `navigation`)
+- [ ] Textos alternativos: `alt` descritivo, `aria-label` quando necessário
+- [ ] Form labels: `<label for="id">` associado com input
+- [ ] Modais: `role="dialog"`, `aria-labelledby`, focus trap
+
+```html
+<!-- ✅ Bom -->
+<button aria-label="Abrir menu" aria-expanded="false">
+  <IconMenu />
+</button>
+
+<!-- ❌ Ruim -->
+<div onClick={openMenu} role="button">Menu</div>
+```
+
+### Validação
+- **axe DevTools** (extensão do navegador)
+- **WAVE** (wave.webaim.org)
+- **Lighthouse** (já vem no DevTools)
+
+---
+
+## 14. SEO para Front-End
+
+### Meta Tags + Open Graph
+```html
+<head>
+  <meta name="description" content="Descrição clara, até 160 caracteres">
+  <meta property="og:title" content="Título do compartilhamento">
+  <meta property="og:image" content="https://...imagem.jpg">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="canonical" href="https://meusite.com/pagina">
+</head>
+```
+
+### Estrutura
+- **Sitemaps**: `/public/sitemap.xml`
+- **Robots.txt**: `/public/robots.txt`
+- **Schema.json**: dados estruturados (`schema.org`)
+- **Next.js**: use Metadata API (app router)
+
+```typescript
+// Next.js 14 - app/layout.tsx
+export const metadata: Metadata = {
+  title: 'Meu Site',
+  description: 'Descrição...',
+  openGraph: {
+    title: 'Meu Site',
+    images: ['/og-image.jpg'],
+  },
+};
+```
+
+---
+
+## 15. Checklist de Qualidade
 
 Antes de entregar código, valide:
 
@@ -436,4 +584,7 @@ Antes de entregar código, valide:
 - [ ] Loading, error e empty states tratados
 - [ ] Nomes claros e consistentes
 - [ ] Componentes com responsabilidade única
-- [ ] Documentação mínima presente (README, JSDoc onde necessário)
+- [ ] Testes cobrindo fluxos críticos
+- [ ] Performance validada (Lighthouse)
+- [ ] Sem vulnerabilidades óbvias
+- [ ] Documentação mínima presente
