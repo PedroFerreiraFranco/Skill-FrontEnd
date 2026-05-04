@@ -6,14 +6,15 @@ Uma **skill para qualquer IA** (Claude AI, ChatGPT, Gemini, GitHub Copilot, etc.
 
 ## 📚 O Que Você Encontra
 
-Uma guia completo cobrindo:
+Um guia completo cobrindo:
 
 ✅ **HTML Semântico** — Tags com significado, acessibilidade e SEO  
 ✅ **CSS Moderno** — Flexbox, Grid, Container Queries, Animações  
 ✅ **JavaScript ES6+** — Padrões modernos, async/await, fetch  
 ✅ **TypeScript** — Interfaces, types, utility types, boas práticas  
-✅ **React** — Componentes, hooks, gerenciamento de estado  
-✅ **Next.js** — App Router, SSR, otimizações  
+✅ **React** — Componentes, hooks, React 18+, compound components, Zustand  
+✅ **Next.js** — App Router, Server/Client Components, Server Actions, cache  
+✅ **Formulários** — react-hook-form, zod, validação acessível  
 ✅ **Arquitetura** — Cliente-servidor, APIs REST, BFF  
 ✅ **Node.js & NPM** — Setup, scripts, dependências  
 ✅ **Clean Code** — Nomes, estrutura, padrões  
@@ -122,8 +123,9 @@ Como devo estruturar as pastas?
 | **CSS3** | Completo | Flexbox, Grid, Modern CSS |
 | **JavaScript** | Completo | ES6+, async/await, APIs |
 | **TypeScript** | Completo | Interfaces, types, patterns |
-| **React** | Completo | Hooks, componentes, patterns |
-| **Next.js** | Completo | App Router, SSR, otimizações |
+| **React** | Completo | Hooks, React 18+, compound components |
+| **Next.js** | Completo | App Router, Server Actions, cache |
+| **Formulários** | Completo | react-hook-form, zod, validação |
 | **Tailwind CSS** | Completo | Utility-first, variantes |
 | **Node.js** | Fundacional | Scripts, environment |
 | **Testing** | Intermediário | Vitest, RTL |
@@ -135,10 +137,13 @@ Como devo estruturar as pastas?
 
 A skill se ativa automaticamente quando você menciona:
 
-- `componente`, `layout`, `landing page`, `dashboard`
-- `formulário`, `design system`, `UI`, `UX`
-- `responsivo`, `mobile-first`, `refatorar`, `code review`
+- `componente`, `component`, `layout`, `landing page`, `dashboard`
+- `formulário`, `form`, `design system`, `UI`, `UX`
+- `responsivo`, `mobile-first`, `refatorar`, `refactor`, `code review`
 - `fetch`, `REST`, `clean code`, nomes de frameworks
+- `useState`, `useEffect`, `hook`, `props`, `context`
+- `Server Component`, `Server Action`, `App Router`
+- `zod`, `react-hook-form`, `Zustand`, `TanStack`
 
 Mas você pode **sempre ativar manualmente** pedindo "use a skill de frontend sênior".
 

@@ -2,12 +2,16 @@
 name: senior-frontend-dev
 description: >
   Dev sênior front-end: HTML semântico, CSS moderno, JS, TypeScript, React, Next.js, Tailwind,
-  UI/UX, estruturas de dados, clean code, APIs REST, Node.js. Use sempre que o usuário pedir
+  UI/UX, estruturas de dados, clean code, APIs REST, Node.js, formulários, validação, zod,
+  react-hook-form, Server Components, Server Actions, App Router. Use sempre que o usuário pedir
   ajuda com front-end: componentes, escolha de stack, refatoração, code review, arquitetura
   React/Next.js, migração de Bootstrap, CSS/JS/TS, acessibilidade, responsividade, performance,
-  SEO, async/await, NPM/Yarn, documentação. Dispare com: "componente", "layout", "landing page",
-  "dashboard", "formulário", "design system", "UI", "UX", "responsivo", "mobile-first",
-  "refatorar", "code review", "fetch", "REST", "clean code", ou framework front-end.
+  SEO, async/await, NPM/Yarn, documentação. Dispare com: "componente", "component", "layout",
+  "landing page", "dashboard", "formulário", "form", "design system", "UI", "UX", "responsivo",
+  "mobile-first", "refatorar", "refactor", "code review", "fetch", "REST", "clean code",
+  "useState", "useEffect", "useRef", "useCallback", "useMemo", "hook", "props", "context",
+  "Server Component", "Server Action", "App Router", "Next.js", "Tailwind", "TypeScript",
+  "zod", "react-hook-form", "Zustand", "TanStack", ou qualquer framework front-end.
 ---
 
 # Senior Frontend Developer
@@ -110,7 +114,7 @@ Métodos de array essenciais (prefira sobre loops manuais):
 Web APIs úteis:
 - `Intersection Observer` → lazy loading, infinite scroll, animações on-scroll
 - `ResizeObserver` → reagir a redimensionamento de elementos
-- `Fetch API` → requisições HTTP (detalhado na seção 4)
+- `Fetch API` → requisições HTTP (detalhado na seção 6)
 - `localStorage`/`sessionStorage` → persistência simples no client
 
 ---
@@ -202,9 +206,242 @@ Escala de complexidade — use o menor que resolva:
 
 💡 A maioria dos apps não precisa de Redux. Comece simples, escale quando a dor aparecer.
 
+**Zustand — exemplo mínimo:**
+```typescript
+import { create } from 'zustand';
+
+interface AuthStore {
+  user: User | null;
+  setUser: (user: User | null) => void;
+}
+
+const useAuthStore = create<AuthStore>((set) => ({
+  user: null,
+  setUser: (user) => set({ user }),
+}));
+
+// Em qualquer componente — sem Provider, sem boilerplate
+const { user, setUser } = useAuthStore();
+```
+
+### Hooks React 18+
+
+**`useTransition`** — marca atualizações como não urgentes (não bloqueia UI):
+```typescript
+const [isPending, startTransition] = useTransition();
+
+startTransition(() => {
+  setFilter(value); // pesquisa pesada não trava o input
+});
+```
+
+**`useDeferredValue`** — adia o valor de um estado até a UI estar livre:
+```typescript
+const deferredSearch = useDeferredValue(search);
+// use deferredSearch para renderizar lista filtrada
+```
+
+**`useId`** — IDs únicos estáveis para SSR/SSG:
+```typescript
+const id = useId();
+return <label htmlFor={id}>Nome <input id={id} /></label>;
+```
+
+### Padrões de Componente
+
+**Compound Components** — API expressiva para componentes compostos:
+```tsx
+// Uso: <Select><Select.Option value="a">A</Select.Option></Select>
+const SelectContext = createContext<SelectContextType>(null!);
+
+function Select({ children, onChange }: SelectProps) {
+  const [value, setValue] = useState('');
+  return (
+    <SelectContext.Provider value={{ value, onChange: onChange ?? setValue }}>
+      <div role="listbox">{children}</div>
+    </SelectContext.Provider>
+  );
+}
+
+Select.Option = function Option({ value, children }: OptionProps) {
+  const { onChange } = useContext(SelectContext);
+  return <div role="option" onClick={() => onChange(value)}>{children}</div>;
+};
+```
+
 ---
 
-## 4. Dados e APIs
+## 4. Next.js (App Router)
+
+### Server vs Client Components
+Por padrão, todos os componentes no App Router são **Server Components** — sem JS no bundle do cliente, acesso direto a banco/API.
+
+```tsx
+// app/users/page.tsx — Server Component (padrão)
+// Sem 'use client' = roda no servidor
+async function UsersPage() {
+  const users = await db.user.findMany(); // acesso direto, sem fetch
+  return <UserList users={users} />;
+}
+
+// components/LikeButton.tsx — Client Component
+'use client'; // necessário para useState, useEffect, event handlers
+
+export function LikeButton({ postId }: { postId: string }) {
+  const [liked, setLiked] = useState(false);
+  return <button onClick={() => setLiked(l => !l)}>{liked ? '❤️' : '🤍'}</button>;
+}
+```
+
+Regra prática: **mantenha Server Component por padrão**. Desça para `'use client'` apenas onde precisar de interatividade.
+
+### Arquivos de Convenção
+```
+app/
+├── layout.tsx        # Shell compartilhado (persiste entre navegações)
+├── page.tsx          # Rota renderizável
+├── loading.tsx       # Suspense automático enquanto a page carrega
+├── error.tsx         # Error boundary da rota ('use client' obrigatório)
+├── not-found.tsx     # Renderizado quando notFound() é chamado
+└── route.ts          # API Route Handler (GET, POST, etc.)
+```
+
+### Server Actions
+Funções que rodam no servidor, chamadas diretamente do cliente — sem API Route:
+
+```typescript
+// app/actions/post.ts
+'use server';
+
+export async function createPost(formData: FormData) {
+  const title = formData.get('title') as string;
+  await db.post.create({ data: { title } });
+  revalidatePath('/posts'); // invalida cache da rota
+}
+
+// app/posts/new/page.tsx
+import { createPost } from '@/app/actions/post';
+
+export default function NewPost() {
+  return (
+    <form action={createPost}>
+      <input name="title" required />
+      <button type="submit">Criar</button>
+    </form>
+  );
+}
+```
+
+### Fetch e Cache no Server
+```typescript
+// Sem cache (sempre fresco)
+const data = await fetch(url, { cache: 'no-store' });
+
+// Cache até revalidação manual ou por tempo
+const data = await fetch(url, { next: { revalidate: 60 } }); // revalida a cada 60s
+
+// Cache padrão (build time) — use para dados estáticos
+const data = await fetch(url);
+```
+
+### Metadata API
+```typescript
+// app/blog/[slug]/page.tsx
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const post = await getPost(params.slug);
+  return {
+    title: post.title,
+    description: post.excerpt,
+    openGraph: { images: [post.coverImage] },
+  };
+}
+```
+
+---
+
+## 5. Formulários
+
+### react-hook-form + zod (padrão da indústria)
+```bash
+npm install react-hook-form zod @hookform/resolvers
+```
+
+**Schema de validação com zod:**
+```typescript
+import { z } from 'zod';
+
+const loginSchema = z.object({
+  email: z.string().email('E-mail inválido'),
+  password: z.string().min(8, 'Mínimo 8 caracteres'),
+});
+
+type LoginForm = z.infer<typeof loginSchema>; // tipo gerado automaticamente
+```
+
+**Componente de formulário:**
+```tsx
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+
+export function LoginForm() {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
+
+  async function onSubmit(data: LoginForm) {
+    await signIn(data);
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} noValidate>
+      <div>
+        <label htmlFor="email">E-mail</label>
+        <input id="email" type="email" {...register('email')} aria-invalid={!!errors.email} />
+        {errors.email && <span role="alert">{errors.email.message}</span>}
+      </div>
+      <div>
+        <label htmlFor="password">Senha</label>
+        <input id="password" type="password" {...register('password')} />
+        {errors.password && <span role="alert">{errors.password.message}</span>}
+      </div>
+      <button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? 'Entrando…' : 'Entrar'}
+      </button>
+    </form>
+  );
+}
+```
+
+**Schemas zod reutilizáveis:**
+```typescript
+// lib/schemas.ts
+export const emailField = z.string().email('E-mail inválido');
+export const passwordField = z.string().min(8).max(100);
+export const nameField = z.string().min(2).max(100).trim();
+
+export const registerSchema = z.object({
+  name: nameField,
+  email: emailField,
+  password: passwordField,
+  confirmPassword: passwordField,
+}).refine(d => d.password === d.confirmPassword, {
+  message: 'Senhas não coincidem',
+  path: ['confirmPassword'],
+});
+```
+
+### Quando usar `<form action={serverAction}>` (Next.js)
+- Formulários simples sem validação complexa no cliente
+- Mutations que não precisam de feedback imediato
+- Quando quer zero JS no cliente
+
+Use `react-hook-form` quando precisar de: validação em tempo real, campos condicionais, arrays dinâmicos (`useFieldArray`), ou UX mais rica.
+
+---
+
+## 6. Dados e APIs
 
 ### Estruturas de Dados em JS/TS
 Domine manipulação nativa antes de libs:
@@ -268,7 +505,7 @@ mínimo boilerplate.
 
 ---
 
-## 5. Arquitetura
+## 7. Arquitetura
 
 ### Cliente-Servidor
 - **Client**: renderiza UI, estado local, envia requests
@@ -298,7 +535,7 @@ Impacto prático no front:
 
 ---
 
-## 6. Node.js (Backend para Front-end)
+## 8. Node.js (Backend para Front-end)
 
 ### NPM/Yarn
 - `dependencies` → produção | `devDependencies` → só desenvolvimento
@@ -335,7 +572,7 @@ npx create-next-app@latest   # Criar projeto Next.js
 
 ---
 
-## 7. Clean Code
+## 9. Clean Code
 
 ### Nomes Claros
 - Componentes: PascalCase, descritivos (`UserProfileCard`, não `Card2`)
@@ -372,7 +609,7 @@ src/
 
 ---
 
-## 8. Documentação Básica
+## 10. Documentação Básica
 
 Documente o suficiente para que outro dev (ou você em 3 meses) entenda.
 
@@ -408,7 +645,7 @@ Código limpo com bons nomes é a melhor documentação. Não documente o óbvio
 
 ---
 
-## 9. Escolha de Stack de Estilização
+## 11. Escolha de Stack de Estilização
 
 Apresente opções antes de iniciar:
 
@@ -424,7 +661,7 @@ Pergunte qual cenário se aplica antes de escolher.
 
 ---
 
-## 10. Testing
+## 12. Testing
 
 ### Tipos de Testes
 - **Unit**: funções isoladas (utils, hooks, lógica pura)
@@ -462,7 +699,7 @@ describe('Button', () => {
 
 ---
 
-## 11. Performance e Debugging
+## 13. Performance e Debugging
 
 ### Otimizações Comuns
 - **Code splitting**: lazy loading de rotas/componentes
@@ -488,7 +725,7 @@ describe('Button', () => {
 
 ---
 
-## 12. Segurança Front-End
+## 14. Segurança Front-End
 
 ### Prevenção de Vulnerabilidades
 - **XSS**: sanitize inputs (`DOMPurify`, `sanitize-html`)
@@ -511,7 +748,7 @@ sessionStorage.setItem('csrfToken', token);
 
 ---
 
-## 13. Acessibilidade (A11y)
+## 15. Acessibilidade (A11y)
 
 ### Checklist WCAG 2.1 AA (Essencial)
 - [ ] Contrastes: 4.5:1 para texto, 3:1 para UI
@@ -539,7 +776,7 @@ sessionStorage.setItem('csrfToken', token);
 
 ---
 
-## 14. SEO para Front-End
+## 16. SEO para Front-End
 
 ### Meta Tags + Open Graph
 ```html
@@ -572,7 +809,7 @@ export const metadata: Metadata = {
 
 ---
 
-## 15. Checklist de Qualidade
+## 17. Checklist de Qualidade
 
 Antes de entregar código, valide:
 
